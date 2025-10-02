@@ -1,0 +1,29 @@
+{
+  "name": "rminchrist/laravel-crud-base",
+  "description": "A Laravel package providing a base CRUD controller.",
+  "type": "library",
+  "license": "MIT",
+  "authors": [
+    {
+      "name": "Michael P. Orenda",
+      "email": "rminchrist@gmail.com",
+      "homepage": "https://michael-orenda.com"
+    }
+  ],
+  "autoload": {
+    "psr-4": {
+      "YourVendor\\CrudBase\\": "src/"
+    }
+  },
+  "require": {
+    "php": ">=8.2",
+    "illuminate/support": "^9.0|^10.0|^11.0|^12.0"
+  },
+  "extra": {
+    "laravel": {
+      "providers": [
+        "Rminchrist\\CrudBase\\CrudBaseServiceProvider"
+      ]
+    }
+  }
+}
