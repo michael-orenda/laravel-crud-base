@@ -1,11 +1,18 @@
 # Changelog
 
-## 1.2.1 — NEW
-- Added `/model/{id}/relations` endpoint.
-- Updated documentation to reflect new functionality.
-- Cleaned up service provider to register relations route automatically.
+## v1.3.0 (2025‑12‑06)
+### Added
+- Explicit relation routes
+- Many-to-many auto routes
+- Unified `/relations` endpoint
+- Strict auto-detection via DetectsRelationships trait
+- Improved ServiceProvider routing engine
 
-## 1.2.0
-- Added automatic parent & children detection.
-- Added `/children` and `/parent` endpoints.
-- Added automatic CRUD routing.
+### Fixed
+- Parent/child detection inconsistencies
+
+### Notes
+Models using RelationshipBaseController must include:
+```
+use DetectsRelationships;
+```

@@ -1,67 +1,39 @@
-# API Documentation
+# CrudBase API Documentation (v1.3.0)
 
-## CRUD ENDPOINTS
-These are automatically created for any controller extending BaseController:
+## CRUD Routes
+`GET /{model}`
+`POST /{model}`
+`GET /{model}/{id}`
+`PUT /{model}/{id}`
+`DELETE /{model}/{id}`
 
-### List all
-GET /{model}
+## Relationship Routes
+### Children
+`GET /{model}/{id}/children`
 
-### Create
-POST /{model}
+### Parent
+`GET /{model}/{id}/parent`
 
-### Show
-GET /{model}/{id}
+### Unified Relations
+`GET /{model}/{id}/relations`
 
-### Update
-PUT /{model}/{id}
-
-### Delete
-DELETE /{model}/{id}
-
-
-## RELATIONSHIP ENDPOINTS
-Automatically created for any controller extending RelationshipBaseController.
-
-### Get children
-GET /{model}/{id}/children  
-Returns all detected hasMany relations.
-
-### Get parent
-GET /{model}/{id}/parent  
-Returns detected belongsTo parent relation.
-
-### Create child
-POST /{model}/{id}/children  
-Creates a child model under the parent.
-
-### Assign parent
-PUT /{model}/{id}/parent  
-Assigns a parent to the model.
-
----
-
-## NEW UNIFIED RELATIONSHIP ENDPOINT (v1.2.1)
-
-### Get parent & children in a single response
-GET /{model}/{id}/relations
-
-**Response example:**
-```json
-{
-  "parent": {
-    "id": 1,
-    "name": "John Doe"
-  },
-  "parent_relation": {
-    "relation": "customer",
-    "data": { "id": 1, "name": "John Doe" }
-  },
-  "children": {
-    "invoices": [ ... ],
-    "payments": [ ... ]
-  }
-}
+## Explicit Relation Routes
+If a model has:
+```
+public function invoices() { ... }
+public function payments() { ... }
 ```
 
-This endpoint works for ANY model automatically.
+Routes auto-generate:
+```
+GET /customer/{id}/invoices
+GET /customer/{id}/payments
+```
 
+## Many‑to‑Many Routes
+```
+GET  /user/{id}/roles
+POST /user/{id}/roles/attach
+POST /user/{id}/roles/detach
+POST /user/{id}/roles/sync
+```

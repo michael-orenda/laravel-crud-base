@@ -1,67 +1,29 @@
 <?php
-
 namespace Rminchrist\CrudBase\Traits;
 
 use ReflectionClass;
 use Illuminate\Database\Eloquent\Relations\Relation;
 
-trait DetectsRelationships
-{
-    public function detectRelations(): array
-    {
+trait DetectsRelationships {
+    public function detectRelations(): array {
         $class = new ReflectionClass($this);
-        $methods = $class->getMethods();
-        $relations = [];
-
-        foreach ($methods as $method) {
-
-            // Only scan methods declared in THIS model class
-            if ($method->class !== $class->getName()) {
-                continue;
-            }
-
-            // Skip methods with parameters
-            if ($method->getNumberOfParameters() > 0) {
-                continue;
-            }
-
-            // Skip magic methods
-            if (str_starts_with($method->getName(), '__')) {
-                continue;
-            }
-
-            // Skip methods that are not camelCase relationship names
-            // Example: invoices, customer, items, payments
-            if (!preg_match('/^[a-z][A-Za-z0-9_]*$/', $method->getName())) {
-                continue;
-            }
-
-            // Try to infer based on return type (Laravel 8+ supports this)
-            $returnType = $method->getReturnType();
-
-            // If method has a declared return type and it's NOT Relation → skip
-            if ($returnType && !$this->isRelationReturnType($returnType)) {
-                continue;
-            }
-
-            // Only execute methods with no declared return type OR explicit Relation type
-            try {
-                $result = $this->{$method->getName()}();
-
-                if ($result instanceof Relation) {
-                    $relations[$method->getName()] = $result;
-                }
-            } catch (\Throwable $e) {
-                // Ignore safely
-            }
+        $methods=$class->getMethods();
+        $rels=[];
+        foreach($methods as $m){
+            if($m->class!==$class->getName()) continue;
+            if($m->getNumberOfParameters()>0) continue;
+            if(str_starts_with($m->getName(),'__')) continue;
+            if(!preg_match('/^[a-z][A-Za-z0-9_]*$/',$m->getName())) continue;
+            $rt=$m->getReturnType();
+            if($rt && !$this->isRelationReturnType($rt)) continue;
+            try{$res=$this->{$m->getName()}();
+                if($res instanceof Relation){$rels[$m->getName()]=$res;}
+            }catch(\Throwable $e){}
         }
-
-        return $relations;
+        return $rels;
     }
-
-    private function isRelationReturnType($returnType): bool
-    {
-        $relationClasses = [
+    private function isRelationReturnType($rt): bool {
+        $rc=[
             \Illuminate\Database\Eloquent\Relations\Relation::class,
             \Illuminate\Database\Eloquent\Relations\HasMany::class,
             \Illuminate\Database\Eloquent\Relations\BelongsTo::class,
@@ -69,37 +31,29 @@ trait DetectsRelationships
             \Illuminate\Database\Eloquent\Relations\BelongsToMany::class,
             \Illuminate\Database\Eloquent\Relations\MorphMany::class,
             \Illuminate\Database\Eloquent\Relations\MorphTo::class,
+            \Illuminate\Database\Eloquent\Relations\MorphOne::class,
         ];
-
-        foreach ($relationClasses as $relation) {
-            if (is_a($returnType->getName(), $relation, true)) {
-                return true;
-            }
-        }
-
+        foreach($rc as $r){ if(is_a($rt->getName(),$r,true)) return true; }
         return false;
     }
-
-    public function detectParentRelation(): ?string
-    {
-        foreach ($this->detectRelations() as $name => $relation) {
-            if ($relation instanceof \Illuminate\Database\Eloquent\Relations\BelongsTo) {
-                return $name;
-            }
+    public function detectParentRelation(): ?string {
+        foreach($this->detectRelations() as $n=>$r){
+            if($r instanceof \Illuminate\Database\Eloquent\Relations\BelongsTo) return $n;
         }
         return null;
     }
-
-    public function detectChildrenRelations(): array
-    {
-        $children = [];
-
-        foreach ($this->detectRelations() as $name => $relation) {
-            if ($relation instanceof \Illuminate\Database\Eloquent\Relations\HasMany) {
-                $children[] = $name;
-            }
+    public function detectChildrenRelations(): array {
+        $out=[];
+        foreach($this->detectRelations() as $n=>$r){
+            if($r instanceof \Illuminate\Database\Eloquent\Relations\HasMany) $out[]=$n;
         }
-
-        return $children;
+        return $out;
     }
-}
+    public function detectManyToManyRelations(): array {
+        $out=[];
+        foreach($this->detectRelations() as $n=>$r){
+            if($r instanceof \Illuminate\Database\Eloquent\Relations\BelongsToMany) $out[]=$n;
+        }
+        return $out;
+    }
+}?>

@@ -3,7 +3,6 @@
 namespace Rminchrist\CrudBase;
 
 use Illuminate\Support\Str;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
 
@@ -11,111 +10,101 @@ class CrudBaseServiceProvider extends ServiceProvider
 {
     public function boot()
     {
-        // Publish config (optional)
-        $this->publishes([
-            __DIR__ . '/../config/crudbase.php' => config_path('crudbase.php'),
-        ], 'crudbase-config');
-
-        // Defer route registration until the framework has finished booting.
-        // This avoids timing/autoload/order issues.
-        $this->app->booted(function () {
-            $this->registerAutoRoutes();
-        });
+        $this->app->booted(fn () => $this->registerAutoRoutes());
     }
 
     protected function registerAutoRoutes()
     {
-        Log::info('CrudBaseServiceProvider: registerAutoRoutes start');
+        $ns     = 'App\\Http\\Controllers\\';
+        $path   = app_path('Http/Controllers');
+        $prefix = config('crudbase.route_prefix');
 
-        $namespace = config('crudbase.controller_namespace', 'App\\Http\\Controllers\\');
-        $path      = config('crudbase.controller_path', app_path('Http/Controllers'));
-        $prefix    = config('crudbase.route_prefix');
-
-        // Ensure package controller parents are loaded BEFORE checks
-        class_exists(\Rminchrist\CrudBase\BaseController::class);
-        class_exists(\Rminchrist\CrudBase\RelationshipBaseController::class);
-
-        // Use recursive scanning so controllers in subfolders are found.
-        $iterator = new \RecursiveIteratorIterator(
+        $it = new \RecursiveIteratorIterator(
             new \RecursiveDirectoryIterator($path)
         );
 
-        foreach ($iterator as $file) {
-            if (! $file->isFile()) {
-                continue;
+        foreach ($it as $f) {
+            if (!$f->isFile()) continue;
+
+            if (!str_ends_with($f->getFilename(), 'Controller.php')) continue;
+
+            $cname = pathinfo($f->getFilename(), PATHINFO_FILENAME);
+            $fqcn  = $ns . $cname;
+
+            if (!class_exists($fqcn)) continue;
+
+            // Basic CRUD
+            if (is_subclass_of($fqcn, BaseController::class)) {
+                $this->crud($fqcn, $prefix);
             }
 
-            $filename = $file->getFilename();
-
-            if (! str_ends_with($filename, 'Controller.php')) {
-                continue;
-            }
-
-            // Build the controller FQCN from the configured namespace + file basename.
-            // If you use sub-namespaces mirroring folders, you'll need a more advanced resolver.
-            $controllerName = pathinfo($filename, PATHINFO_FILENAME);
-            $fqcn = $namespace . $controllerName;
-
-            Log::info("CrudBaseServiceProvider: found file {$file->getPathname()} -> trying {$fqcn}");
-
-            if (! class_exists($fqcn)) {
-                Log::info("CrudBaseServiceProvider: class {$fqcn} not found (skipping)");
-                continue;
-            }
-
-            // Register CRUD routes
-            if (
-                is_subclass_of($fqcn, \Rminchrist\CrudBase\BaseController::class) &&
-                config('crudbase.auto_crud_routes', true)
-            ) {
-                Log::info("CrudBaseServiceProvider: registering CRUD routes for {$fqcn}");
-                $this->registerCrudRoutesFor($fqcn, $prefix);
-            }
-
-            // Register Relationship routes
-            if (
-                is_subclass_of($fqcn, \Rminchrist\CrudBase\RelationshipBaseController::class) &&
-                config('crudbase.auto_relationship_routes', true)
-            ) {
-                Log::info("CrudBaseServiceProvider: registering relationship routes for {$fqcn}");
-                $this->registerRelationshipRoutesFor($fqcn, $prefix);
+            // Relationship + Explicit + M2M
+            if (is_subclass_of($fqcn, RelationshipBaseController::class)) {
+                $this->rel($fqcn, $prefix);
+                $this->explicit($fqcn, $prefix);
+                $this->mtm($fqcn, $prefix);
             }
         }
-
-        Log::info('CrudBaseServiceProvider: registerAutoRoutes end');
     }
 
-    protected function registerCrudRoutesFor(string $controller, ?string $prefix)
+    protected function crud($controller, $prefix)
     {
         $base = strtolower(Str::snake(Str::replaceLast('Controller', '', class_basename($controller))));
-        $uri  = $prefix ? "{$prefix}/{$base}" : $base;
+        $uri  = $prefix ? "$prefix/$base" : $base;
 
-        // Choose api or web according to config or default to 'api'
-        $middleware = config('crudbase.route_middleware', 'api');
-
-        Route::middleware($middleware)->group(function () use ($controller, $uri) {
-            Route::get($uri,               [$controller, 'index']);
-            Route::post($uri,              [$controller, 'store']);
-            Route::get("{$uri}/{id}",      [$controller, 'show']);
-            Route::put("{$uri}/{id}",      [$controller, 'update']);
-            Route::delete("{$uri}/{id}",   [$controller, 'destroy']);
+        Route::middleware('api')->group(function () use ($controller, $uri) {
+            Route::get($uri,            [$controller, 'index']);
+            Route::post($uri,           [$controller, 'store']);
+            Route::get("$uri/{id}",     [$controller, 'show']);
+            Route::put("$uri/{id}",     [$controller, 'update']);
+            Route::delete("$uri/{id}",  [$controller, 'destroy']);
         });
     }
 
-    protected function registerRelationshipRoutesFor(string $controller, ?string $prefix)
+    protected function rel($controller, $prefix)
     {
         $base = strtolower(Str::snake(Str::replaceLast('Controller', '', class_basename($controller))));
-        $uri  = $prefix ? "{$prefix}/{$base}" : $base;
+        $uri  = $prefix ? "$prefix/$base" : $base;
 
-        $middleware = config('crudbase.route_middleware', 'api');
+        Route::middleware('api')->group(function () use ($controller, $uri) {
+            Route::get("$uri/{id}/children",  [$controller, 'children']);
+            Route::get("$uri/{id}/parent",    [$controller, 'parent']);
+            Route::get("$uri/{id}/relations", [$controller, 'relations']);
+        });
+    }
 
-        Route::middleware($middleware)->group(function () use ($controller, $uri) {
-            Route::get("{$uri}/{id}/children",   [$controller, 'children']);
-            Route::post("{$uri}/{id}/children",  [$controller, 'storeChild']);
-            Route::get("{$uri}/{id}/parent",     [$controller, 'parent']);
-            Route::put("{$uri}/{id}/parent",     [$controller, 'setParent']);
-            Route::get("{$uri}/{id}/relations",  [$controller, 'relations']);
+    protected function explicit($controller, $prefix)
+    {
+        $instance = new $controller;
+        $model    = $instance->getModelInstance(); // model MUST expose getter
+        $rels     = $model->detectRelations();
 
+        $base = strtolower(Str::snake(Str::replaceLast('Controller', '', class_basename($controller))));
+        $uri  = $prefix ? "$prefix/$base" : $base;
+
+        Route::middleware('api')->group(function () use ($controller, $uri, $rels) {
+            foreach ($rels as $name => $relation) {
+                Route::get("$uri/{id}/$name", [$controller, "relation_{$name}"]);
+            }
+        });
+    }
+
+    protected function mtm($controller, $prefix)
+    {
+        $instance = new $controller;
+        $model    = $instance->getModelInstance();
+        $rels     = $model->detectManyToManyRelations();
+
+        $base = strtolower(Str::snake(Str::replaceLast('Controller', '', class_basename($controller))));
+        $uri  = $prefix ? "$prefix/$base" : $base;
+
+        Route::middleware('api')->group(function () use ($controller, $uri, $rels) {
+            foreach ($rels as $name) {
+                Route::get("$uri/{id}/$name",           [$controller, "mtm_get_{$name}"]);
+                Route::post("$uri/{id}/$name/attach",   [$controller, "mtm_attach_{$name}"]);
+                Route::post("$uri/{id}/$name/detach",   [$controller, "mtm_detach_{$name}"]);
+                Route::post("$uri/{id}/$name/sync",     [$controller, "mtm_sync_{$name}"]);
+            }
         });
     }
 }

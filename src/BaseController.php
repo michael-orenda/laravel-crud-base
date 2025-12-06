@@ -15,6 +15,11 @@ abstract class BaseController extends \App\Http\Controllers\Controller
         $this->model = $this->resolveModel();
     }
 
+    public function getModelInstance()
+    {
+        return $this->model;
+    }
+
     protected function resolveModel(): Model
     {
         $controller = class_basename(static::class);

@@ -1,82 +1,57 @@
 <?php
-
 namespace Rminchrist\CrudBase;
 
 use Illuminate\Http\Request;
-use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
-abstract class RelationshipBaseController extends BaseController
-{
-    public function children($id)
-    {
-        $model = $this->model->findOrFail($id);
-
-        if (!method_exists($model, 'detectChildrenRelations')) {
-            throw new NotFoundHttpException("Model does not support relationship scanning");
+abstract class RelationshipBaseController extends BaseController {
+    public function children($id){
+        $m=$this->model->findOrFail($id);
+        $out=[];
+        foreach($m->detectChildrenRelations() as $r){
+            $out[$r]=$m->{$r}()->get();
         }
-
-        $children = $model->detectChildrenRelations();
-
-        if (empty($children)) {
-            return response()->json([]);
-        }
-
-        // For now, return ALL children relations (could add parameter to choose specific one)
-        $result = [];
-
-        foreach ($children as $relation) {
-            $result[$relation] = $model->{$relation}()->get();
-        }
-
-        return response()->json($result);
+        return response()->json($out);
     }
-
-    public function parent($id)
-    {
-        $model = $this->model->findOrFail($id);
-
-        if (!method_exists($model, 'detectParentRelation')) {
-            throw new NotFoundHttpException("Model does not support relationship scanning");
-        }
-
-        $relation = $model->detectParentRelation();
-
-        if (!$relation) {
-            return response()->json(null);
-        }
-
-        return response()->json($model->{$relation}()->first());
+    public function parent($id){
+        $m=$this->model->findOrFail($id);
+        $r=$m->detectParentRelation();
+        return $r? $m->{$r}()->first():null;
     }
-
-    public function relations($id)
-    {
-        $model = $this->model->findOrFail($id);
-
-        $data = [
-            "parent"   => $model,
-            "parent_relation" => null,
-            "children" => []
-        ];
-
-        // Detect parent
-        if (method_exists($model, 'detectParentRelation')) {
-            $parentRel = $model->detectParentRelation();
-            if ($parentRel) {
-                $data["parent_relation"] = [
-                    "relation" => $parentRel,
-                    "data"     => $model->{$parentRel}()->first()
-                ];
-            }
+    public function relations($id){
+        $m=$this->model->findOrFail($id);
+        $d=['parent'=>$m,'parent_relation'=>null,'children'=>[]];
+        $pr=$m->detectParentRelation();
+        if($pr){
+            $d['parent_relation']=['relation'=>$pr,'data'=>$m->{$pr}()->first()];
         }
-
-        // Detect children
-        if (method_exists($model, 'detectChildrenRelations')) {
-            $children = $model->detectChildrenRelations();
-            foreach ($children as $childRel) {
-                $data["children"][$childRel] = $model->{$childRel}()->get();
-            }
+        foreach($m->detectChildrenRelations() as $r){
+            $d['children'][$r]=$m->{$r}()->get();
         }
-
-        return response()->json($data);
+        return response()->json($d);
     }
-}
+    public function __call($method,$args){
+        if(str_starts_with($method,'relation_'))
+            return $this->explicit($method,$args);
+        if(str_starts_with($method,'mtm_'))
+            return $this->mtm($method,$args);
+        return parent::__call($method,$args);
+    }
+    protected function explicit($method,$args){
+        $rel=str_replace('relation_','',$method);
+        $id=$args[0];
+        $m=$this->model->findOrFail($id);
+        return response()->json($m->{$rel}()->get());
+    }
+    protected function mtm($method,$args){
+        $id=$args[0];
+        $m=$this->model->findOrFail($id);
+        [$p,$action,$rel]=explode('_',$method,3);
+        $r=$m->{$rel}();
+        switch($action){
+            case'get': return response()->json($r->get());
+            case'attach': $r->attach(request('id')); return response()->json(['status'=>'attached']);
+            case'detach': $r->detach(request('id')); return response()->json(['status'=>'detached']);
+            case'sync': $r->sync(request('ids',[])); return response()->json(['status'=>'synced']);
+        }
+    }
+}?>
