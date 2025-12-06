@@ -1,0 +1,171 @@
+###############################################################################
+# OS-SPECIFIC JUNK
+###############################################################################
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon?
+._*
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Linux
+*~
+.nfs*
+
+###############################################################################
+# IDE & EDITOR FILES
+###############################################################################
+
+# VSCode
+.vscode/
+*.code-workspace
+
+# JetBrains / PhpStorm / WebStorm
+.idea/
+*.iml
+out/
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# Eclipse / NetBeans / Other IDEs
+.project
+.classpath
+.c9/
+.nb-gradle/
+*.launch
+.settings/
+
+###############################################################################
+# PHP & COMPOSER
+###############################################################################
+
+# Composer vendor (should NOT be committed in packages)
+vendor/
+
+# Composer lock is ignored in packages
+composer.lock
+
+# Composer cache
+composer.phar
+.cache/
+.phpunit.result.cache
+
+###############################################################################
+# PHPUNIT / TESTING
+###############################################################################
+
+# PHPUnit
+.phpunit.cache/
+phpunit.xml
+phpunit.xml.dist
+
+# Pest
+.pest-results/
+
+# Coverage
+coverage/
+.clover
+*.coverage
+*.cov
+
+###############################################################################
+# LOGS / TEMPORARY
+###############################################################################
+
+*.log
+logs/
+storage/logs/
+*.tmp
+*.bak
+*.swp
+*.swo
+*.orig
+
+###############################################################################
+# NODE & FRONTEND (if docs use JS)
+###############################################################################
+
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-lock.yaml
+dist/
+build/
+.cache-loader/
+.next/
+.svelte-kit/
+
+###############################################################################
+# DOCUMENTATION / SITE BUILD
+###############################################################################
+
+# MkDocs
+site/
+
+# Docusaurus
+.docusaurus/
+
+# Jekyll
+/_site/
+.sass-cache/
+.jekyll-cache/
+
+# Storybook
+storybook-static/
+
+###############################################################################
+# ENV / CREDENTIALS (not usually in packages, but safe)
+###############################################################################
+
+.env
+.env.*
+.env.local
+.env.backup
+.env.testing
+
+###############################################################################
+# DOCKER / DEPLOYMENT
+###############################################################################
+
+docker-compose.override.yml
+docker-compose.local.yml
+.docker/
+docker/
+*.pid
+
+###############################################################################
+# MISC
+###############################################################################
+
+# Binary files
+*.exe
+*.dll
+*.so
+
+# Archives
+*.zip
+*.tar
+*.tar.gz
+*.rar
+*.7z
+
+# Cache
+.cache/
+.tmp/
+temp/
+
+# Editor artifacts
+*.kate-swp
+*~

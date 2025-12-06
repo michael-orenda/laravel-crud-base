@@ -12,7 +12,7 @@
   ],
   "autoload": {
     "psr-4": {
-      "YourVendor\\CrudBase\\": "src/"
+      "Rminchrist\\CrudBase\\": "src/"
     }
   },
   "require": {

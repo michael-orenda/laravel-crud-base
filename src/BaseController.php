@@ -18,7 +18,10 @@ abstract class BaseController extends \App\Http\Controllers\Controller
     protected function resolveModel(): Model
     {
         $controller = class_basename(static::class);
-        $modelName = Str::replaceLast('Controller', '', $controller);
+        $name = Str::replaceLast('Controller', '', $controller);
+
+         // Force singular names
+        $modelName = Str::singular($name);  
 
         $modelClass = "App\\Models\\{$modelName}";
 
